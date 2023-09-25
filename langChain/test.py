@@ -22,11 +22,11 @@ json_data = '''
     "mbrExerciseGoal": 2,
     "mbrExerciseExperienceLevel": 5,
     "mbrExerciseTarget": 3,
-    "mbrKneeHealthConsidered": 0,
+    "mbrKneeHealthConsidered": 1,
     "mbrNoiseConsidered": 1,
     "mbrLongSitter": 1,
-    "mbrNeckShoulderFocused": 0,
-    "mbrBackDiskConsidered": 0,
+    "mbrNeckShoulderFocused": 1,
+    "mbrBackDiskConsidered": 1,
     "mbrProfileUrl": "https://fs.hyunfit.life/api/hyunfit/file/trn_1_profile.png",
     "personalTrainingDTOList": null,
     "exerciseHistory": {
@@ -87,8 +87,8 @@ member_exercise_goal = {1: "체중 관리", 2: "건강 관리"}[exercise_goal]
 exercise_target = parsed_json['mbrExerciseTarget']
 member_exercise_target = {1: "상체", 2: "하체", 3: "전신", 4: "유산소", 5: "상관없음"}[exercise_target]
 mbr_experience_level = parsed_json['mbrExerciseExperienceLevel']
-member_exercise_experience = {1: "초보", 2: "초중급", 3: "중급", 4: "중고급", 5: "고급"}[mbr_experience_level]
-print(f'멤버 목표 : {member_exercise_goal, member_exercise_target, member_exercise_experience}')
+member_experience_level = {1: "초보", 2: "초중급", 3: "중급", 4: "중고급", 5: "고급"}[mbr_experience_level]
+print(f'멤버 목표 : {member_exercise_goal, member_exercise_target, member_experience_level}')
 # 멤버별 고려사항
 knee_considered = parsed_json['mbrKneeHealthConsidered']
 noise_considered = parsed_json['mbrNoiseConsidered']
@@ -109,19 +109,19 @@ print(f'멤버 별 고려 사항 : {member_consider_health}')
 exercise_history = parsed_json['exerciseHistory']
 # print(f'해당 월 운동 기록 배열 : {exercise_history}')
 # 해당 월에 소모한 총 칼로리
-total_calories = exercise_history['totalCalories']
-print(f'해당 월에 소모한 총 칼로리 : {total_calories}')
+member_total_calories = exercise_history['totalCalories']
+print(f'해당 월에 소모한 총 칼로리 : {member_total_calories}')
 # 해당 월에 운동한 총 시간 (초)
-total_time = exercise_history['totalExerciseTimeSeconds']
-print(f'해당 월에 운동한 총 시간 (초) : {total_time}')
+member_total_time = exercise_history['totalExerciseTimeSeconds']
+print(f'해당 월에 운동한 총 시간 (초) : {member_total_time}')
 # 해당 월에 운동한 동작의 정확도
 excellent_count = exercise_history['totalExcellentCount']
 good_count = exercise_history['totalGoodCount']
 bad_count = exercise_history['totalBadCount']
-print(f'해당 월에 운동한 동작의 정확도 : {excellent_count, good_count, bad_count}')
+member_accuracy_count = {'excellent': excellent_count, 'good': good_count, 'bad': bad_count}
+print(f'해당 월에 운동한 동작의 정확도 : {member_accuracy_count}')
 # 해당 월에 운동한 부위
 exercise_targets = exercise_history['exerciseTargets']
-print(f'해당 월에 운동한 부위 : {exercise_targets}')
 # 운동 부위에 대한 매핑
 target_mapping = {
     1: '광배근',
@@ -139,7 +139,7 @@ target_mapping = {
     13: '후면어깨'
 }
 
-mapped_exercise_targets = [
+member_mapped_exercise_targets = [
     {
         "운동 타겟부위": target_mapping[item['targetArea']],
         "타겟부위 소모한 칼로리": item['totalCalories']
@@ -147,12 +147,11 @@ mapped_exercise_targets = [
     for item in exercise_targets
 ]
 
-print(f'매핑된 해당 월에 운동한 부위 : {mapped_exercise_targets}')
+print(f'매핑된 해당 월에 운동한 부위 : {member_mapped_exercise_targets}')
 
 # 해당월의 날짜 별 기록
 daily_records = exercise_history['dailyRecords']
-print(f'날짜 별 기록 : {daily_records}')
-filtered_daily_records = []
+member_filtered_daily_records = []
 # 필터링
 for record in daily_records:
     timestamp_in_ms = record['day']
@@ -161,28 +160,38 @@ for record in daily_records:
 
     calories = record['calories']
 
-    filtered_daily_records.append({'운동한 날짜': normal_date, '날짜에 소모한 칼로리': calories})
+    member_filtered_daily_records.append({'운동한 날짜': normal_date, '날짜에 소모한 칼로리': calories})
 
 # 변환된 데이터 확인
-print(f'필터링된 데이터: {filtered_daily_records}')
+print(f'필터링된 데이터: {member_filtered_daily_records}')
 
 
 # system_template 설정
 # ChatPromptTemplate을 사용하여 LLM에게 역할 부여 system, human, ai
-system_template = f"당신은 {member_name}님의 운동 목표를 {goal_str}로, 타겟은 {target_str}로 설정하는 헬스 트레이너입니다. 추가로 고려할 사항은 {health_str}이며, 주로 집중하는 부위는 {target_areas_str}입니다."
-human_template = "{text}"
+system_template = f"당신은 회원의 한달간 운동에 결과 대한 피드백을 주는 전문가 입니다. 해당 텍스트를 받은 결과를 토대로 보고서를 작성해주세요"
+human_template = f'''
+해당 회원의 이름은 { member_name }, 이번달 퍼스널 트레이닝을 받은 횟수는 { member_past_pt_count }회 입니다.
+{ member_name }님의 성별은 {  member_gender }, 키는 { member_height }cm, 몸게는 { member_weight }kg 입니다.
+{ member_name }님은 운동 능력이 { member_experience_level }이고, 목표로 하는 것은 { member_exercise_goal } 입니다. 주로 운동하는 부위는 { member_exercise_target } 입니다.
+{ member_name }님의 고려 사항은 다음과 같습니다 : { member_consider_health }
+{ member_name }님은 해당 월에 총 { member_total_time }시간(초) 운동 했으며, 소모한 총 칼로리는 { member_total_calories }Kcal 입니다.
+{ member_name }님은 해당월에 운동 기록의 정확도는 { member_accuracy_count } 입니다.
+해당 월에 운동한 날짜와 칼로리의 배열은 다음과 같습니다. { member_filtered_daily_records }
+해당 월에 운동한 부위는 다음 배열과 같습니다. { member_mapped_exercise_targets }
+'''
+
 
 print(system_template)
+print(human_template)
+chat_prompt = ChatPromptTemplate.from_messages([
+    ("system", system_template),
+    ("human", human_template)
+])
 
-# chat_prompt = ChatPromptTemplate.from_messages([
-#     ("system", system_template),
-#     ("human", human_template),
-# ])
-#
-# # LLM과 LLMChain 초기화
-# llm = OpenAI(openai_api_key=config.OPENAI_API_KEY)
-# chain = LLMChain(llm=llm, prompt=chat_prompt)
-#
-# # LLMChain 실행
-# result = chain.run(name=member_name, goal=exercise_goal, text="어떤 운동을 추천해주세요?")
-# print(result)
+# LLM과 LLMChain 초기화
+llm = OpenAI(openai_api_key=config.OPENAI_API_KEY)
+chain = LLMChain(llm=llm, prompt=chat_prompt)
+
+# LLMChain 실행
+result = chain.run()
+print(result)
