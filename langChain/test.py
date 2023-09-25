@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from langchain.prompts import ChatPromptTemplate
 from langchain.llms import OpenAI
@@ -148,17 +149,23 @@ mapped_exercise_targets = [
 
 print(f'매핑된 해당 월에 운동한 부위 : {mapped_exercise_targets}')
 
-
-# 해당 월에 운동한 날짜
-exercised_days = exercise_history['exercisedDays']
-print(f'해당 월에 운동한 날짜 : {exercised_days}')
-# 날짜 별 기록
+# 해당월의 날짜 별 기록
 daily_records = exercise_history['dailyRecords']
 print(f'날짜 별 기록 : {daily_records}')
+filtered_daily_records = []
+# 필터링
+for record in daily_records:
+    timestamp_in_ms = record['day']
+    timestamp_in_s = timestamp_in_ms // 1000  # 밀리세컨드를 초로 변환
+    normal_date = datetime.fromtimestamp(timestamp_in_s).strftime('%Y-%m-%d')
 
+    calories = record['calories']
 
-target_areas = [str(target['targetArea']) for target in exercise_targets]
-target_areas_str = ", ".join(target_areas)
+    filtered_daily_records.append({'운동한 날짜': normal_date, '날짜에 소모한 칼로리': calories})
+
+# 변환된 데이터 확인
+print(f'필터링된 데이터: {filtered_daily_records}')
+
 
 # system_template 설정
 # ChatPromptTemplate을 사용하여 LLM에게 역할 부여 system, human, ai
