@@ -2,7 +2,9 @@ from datetime import datetime
 import json
 from langchain.prompts import ChatPromptTemplate
 from langchain.llms import OpenAI
-from langchain.chains import LLMChain
+from langchain.chains import (
+    StuffDocumentsChain, LLMChain, ConversationalRetrievalChain
+)
 import config
 
 # JSON 데이터 불러오기 (실제로는 API 요청 등을 통해 받을 수 있습니다.)
@@ -168,30 +170,28 @@ print(f'필터링된 데이터: {member_filtered_daily_records}')
 
 # system_template 설정
 # ChatPromptTemplate을 사용하여 LLM에게 역할 부여 system, human, ai
-system_template = f"당신은 회원의 한달간 운동에 결과 대한 피드백을 주는 전문가 입니다. 해당 텍스트를 받은 결과를 토대로 보고서를 작성해주세요"
-human_template = f'''
-해당 회원의 이름은 { member_name }, 이번달 퍼스널 트레이닝을 받은 횟수는 { member_past_pt_count }회 입니다.
-{ member_name }님의 성별은 {  member_gender }, 키는 { member_height }cm, 몸게는 { member_weight }kg 입니다.
-{ member_name }님은 운동 능력이 { member_experience_level }이고, 목표로 하는 것은 { member_exercise_goal } 입니다. 주로 운동하는 부위는 { member_exercise_target } 입니다.
-{ member_name }님의 고려 사항은 다음과 같습니다 : { member_consider_health }
-{ member_name }님은 해당 월에 총 { member_total_time }시간(초) 운동 했으며, 소모한 총 칼로리는 { member_total_calories }Kcal 입니다.
-{ member_name }님은 해당월에 운동 기록의 정확도는 { member_accuracy_count } 입니다.
-해당 월에 운동한 날짜와 칼로리의 배열은 다음과 같습니다. { member_filtered_daily_records }
-해당 월에 운동한 부위는 다음 배열과 같습니다. { member_mapped_exercise_targets }
-'''
+system_template = '''"해당 회원의 이름은 {name}, 이번달 퍼스널 트레이닝을 받은 횟수는 {pt_count}회 입니다."
+                   "{name}님의 성별은 {gender}, 키는 {height}cm, 몸게는 {weight}kg 입니다."
+                   "{name}님은 운동 능력이 {level}이고, 목표로 하는 것은 {goal} 입니다. "
+                   "주로 운동하는 부위는 {target} 입니다. {name}님의 고려 사항은 다음과 같습니다 : {consider}"
+                   "{name}님은 해당 월에 총 {time}시간(초) 운동 했으며, 소모한 총 칼로리는 {calories}Kcal 입니다."
+                   "{name}님은 해당월에 운동 기록의 정확도는 {accuracy} 입니다."
+                   "해당 월에 운동한 날짜와 칼로리의 배열은 다음과 같습니다. {daily_records}"
+                   "해당 월에 운동한 부위는 다음 배열과 같습니다. {mapped_target}"'''
+human_template = "{text}"
 
-
-print(system_template)
-print(human_template)
 chat_prompt = ChatPromptTemplate.from_messages([
     ("system", system_template),
-    ("human", human_template)
+    ("human", human_template),
 ])
 
 # LLM과 LLMChain 초기화
 llm = OpenAI(openai_api_key=config.OPENAI_API_KEY)
 chain = LLMChain(llm=llm, prompt=chat_prompt)
-
+print(f'llm : {llm}')
+print(f'chain : {chain}')
 # LLMChain 실행
-result = chain.run()
+result = chain.run(name=member_name, pt_count=member_past_pt_count, gender=member_gender, height=member_height, weight=member_weight, level=member_experience_level, goal=member_exercise_goal, consider=member_consider_health, time=member_total_time, calories=member_total_calories, accuracy=member_accuracy_count, daily_records=member_filtered_daily_records, mapped_target=member_mapped_exercise_targets, target=member_mapped_exercise_targets, text="회원의 앞으로 나아가야할 방향을 제시해주는 보고서를 작성해주세요.")
+
+print("================ 결과 보고서 ==================")
 print(result)
