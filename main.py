@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Header
-from typing import Annotated
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import openai
 import config
@@ -10,6 +10,18 @@ import amber
 openai.api_key = config.OPENAI_API_KEY  # 여기에 실제 API 키를 입력하시거나 외부에서 불러오십시오.
 
 app = FastAPI()
+
+app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/generate_fitness_report/")
