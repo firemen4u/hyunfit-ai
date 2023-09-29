@@ -7,6 +7,7 @@ from .routine_data_handler import routineDataHandler
 
 
 class RoutineRecommender():
+    NUM_RECOMMENDATIONS = 5
     routines = routineDataHandler.routines
     must_be_included = ['exc_goal_diet', 'exc_goal_healthy',  'exc_type_lower_weight', 'exc_type_upper_weight', 'exc_type_all_weight', 'exc_type_cardio', 'experience_level']
 
@@ -30,13 +31,13 @@ class RoutineRecommender():
         cosine_sim = cosine_similarity(encoded_df.drop(columns=excluded_columns + ['rtn_seq']), input_df.drop(columns=excluded_columns))
 
         cosine_sim_series = pd.Series(cosine_sim[:, 0])
-        top_10_similar_users = cosine_sim_series.nlargest(8)
-        top_10_indices = top_10_similar_users.index
+        largest_scores = cosine_sim_series.nlargest(self.NUM_RECOMMENDATIONS)
+        largest_score_indices = largest_scores.index
         # 추천된 루틴 가져오기
 
-        df_rcm: pd.DataFrame = self.routines.loc[top_10_indices]
+        df_rcm: pd.DataFrame = self.routines.loc[largest_score_indices]
         df_rcm = df_rcm.astype(int)
-        df_rcm["score"] = top_10_similar_users.values
+        df_rcm["score"] = largest_scores.values
         df_rcm["score"] = df_rcm['score'].astype(float)
         df_rcm.sort_values(by="score", ascending=False)
         return df_rcm.to_dict('records')

@@ -11,8 +11,6 @@ openai.api_key = config.OPENAI_API_KEY  # 여기에 실제 API 키를 입력하�
 
 app = FastAPI()
 
-app = FastAPI()
-
 origins = ["*"]
 
 app.add_middleware(
@@ -150,7 +148,6 @@ async def generate_report(data: GptMemberDto):
 @app.post("/recommendations")
 async def get_routine_recommendations(member: amber.Member):
     return amber.recommender.routine_recommendations(member)
-
 
 # FastAPI 앱 실행
 if __name__ == "__main__":
