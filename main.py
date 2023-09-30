@@ -7,7 +7,7 @@ from gpt import GptMemberDto
 import amber
 
 
-openai.api_key = config.OPENAI_API_KEY  # 여기에 실제 API 키를 입력하시거나 외부에서 불러오십시오.
+openai.api_key = config.OPENAI_API_KEY
 
 app = FastAPI()
 
@@ -47,14 +47,12 @@ async def generate_report(data: GptMemberDto):
     if data.mbrBackDiskConsidered:
         health_conditions.append("허리 디스크가 있음")
     consider = ", ".join(health_conditions)
-    # print(f'멤버 별 고려 사항 : {consider}')
 
     # 해당 월에 운동한 동작의 정확도
     excellent_count = data.exerciseHistory['totalExcellentCount']
     good_count = data.exerciseHistory['totalGoodCount']
     bad_count = data.exerciseHistory['totalBadCount']
     accuracy = {'excellent': excellent_count, 'good': good_count, 'bad': bad_count}
-    # print(f'해당 월에 운동한 동작의 정확도 : {accuracy}')
     # 해당 월에 운동한 부위
     exercise_targets = data.exerciseHistory['exerciseTargets']
     # 운동 부위에 대한 매핑
@@ -82,7 +80,6 @@ async def generate_report(data: GptMemberDto):
         for item in exercise_targets
     ]
 
-    # print(f'매핑된 해당 월에 운동한 부위 : {mapped_target}')
 
     time = data.exerciseHistory['totalExerciseTimeSeconds']
     calories = data.exerciseHistory['totalCalories']
@@ -100,8 +97,6 @@ async def generate_report(data: GptMemberDto):
 
         member_filtered_daily_records.append({'운동한 날짜': normal_date, '날짜에 소모한 칼로리': calories})
 
-    # 변환된 데이터 확인
-    # print(f'필터링된 데이터: {member_filtered_daily_records}')
 
     system_text = f'''당신은 유능한 헬스트레이너 이자 의사입니다.
                                해당 회원의 이름은 {name}, 이번달 퍼스널 트레이닝을 받은 횟수는 {pt_count}회 입니다.
@@ -112,9 +107,7 @@ async def generate_report(data: GptMemberDto):
                                {name}님은 해당월에 운동 기록의 정확도는 {accuracy} 입니다.
                                해당 월에 운동한 날짜와 칼로리는 다음과 같습니다. {member_filtered_daily_records}
                                해당 월에 운동한 부위는 다음 배열과 같습니다. {mapped_target}'''
-    # print("****************")
-    # print(system_text)
-    # print("*****************")
+
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -124,7 +117,14 @@ async def generate_report(data: GptMemberDto):
             },
             {
                 "role": "user",
-                "content": "현재 회원의 운동기록에 대한 피드백과 앞으로 나아가야할 운동 방향을 보고서 형식으로 제시해주세요"
+                "content": '''현재 회원의 운동기록에 대한 피드백과 앞으로 나아가야할 운동 방향을 보고서 형식으로 제시해주세요
+                            보고서 형식은 서론 본론 결론 형식으로 작성해주세요
+                            서론의 형식은 이번 달의 운동결과(총 운동시간, 총 소모 칼로리 등)에 대해 설명하고
+                            회원의 키와 몸무게에 대해 건강관련 평가를 내려주세요.
+                            본론의 형식은 운동 결과에 대해 피드백()을 주세요
+                            결론으로는 앞으로 나아갈 운동방향에 대해 회원의 운동목표에 맞는 운동, 식단 추천을 해주고
+                            다음달에는 어떤식으로 운동을 진행하면 좋을지 작성하며 마무리해주세요.
+                            '''
             },
             {
                 "role": "assistant",
@@ -138,8 +138,6 @@ async def generate_report(data: GptMemberDto):
         frequency_penalty=0,
         presence_penalty=0
     )
-    # print("안녕하세요?")
-    # print(response.choices[0].message['content'])
 
     ai_message = response.choices[0].message['content']
     return {"ai_message": ai_message}
