@@ -101,17 +101,22 @@ async def generate_report(data: GptMemberDto):
 
     top3_target = [t[0] for t in targets[:2]]
 
-    system_text = f'''당신은 유능한 헬스트레이너입니다. 당신이 담당하는 회원의 이름은 {name}, 이번달 퍼스널 트레이닝을 받은 횟수는 {pt_count}회. {name}의 성별은 {gender}, 키는 {height}cm, 몸무게는 {weight}kg.
-{name}님의 운동 능력은 {level}이고, 목표로 하는 것은 {goal} 입니다. 주로 운동하는 부위는 {target} 입니다. {name}님의 고려 사항은 다음과 같습니다 : {consider}
-{name}님의 이번 달 운동 시간: {round(timeInSeconds/60)}분.
-소모한 총 칼로리: {calories}Kcal.
-운동 기록의 정확도는 {accuracy}.
-이번 달 출석일수: {len(member_filtered_daily_records)}일
-이번 달에 가장 많이 운동한 부위: {','.join(top3_target)}'''
+    system_text = f'''당신은 헬스트레이너입니다. 회원이름:{name}, 이번달 personal training을 받은 횟수:{pt_count}회.
+{name}의 성별,키,몸무게: {gender},{height}cm,{weight}kg.
+운동 능력:{level}
+운동 목표:{goal}
+고려 사항:{consider}
+한달 간 운동하는 부위:{target}
+이번 달 운동 시간:{round(timeInSeconds/60)}분.
+소모한 총 칼로리:{calories}Kcal.
+운동 기록의 정확도:{accuracy}.
+이번 달 출석일수:{len(member_filtered_daily_records)}일
+이번 달 많이 운동한 부위:{','.join(top3_target)}'''
+
 
     t1 = time.time()
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4",
         messages=[
             {
                 "role": "system",
@@ -119,8 +124,11 @@ async def generate_report(data: GptMemberDto):
             },
             {
                 "role": "user",
-                "content": '''현재 회원의 운동기록에 대한 피드백과 앞으로 나아가야할 운동 방향을 보고서 형식으로 제시. 1. 키와 몸무게에 대해 건강관련 평가. 2. 본론의 형식은 운동 결과에 대한 피드백을 주세요. 결론으로는 앞으로 나아갈 운동방향에 대해 회원의 운동목표에 맞는 운동, 식단 추천을 해주고
-다음달에는 어떤식으로 운동을 진행하면 좋을지 작성하며 마무리해주세요.
+                "content": '''현재 회원의 운동기록입니다. 아래형태로 간단히 대답해주세요.
+1. 키와 몸무게에 대해 건강관련 평가. : BMI 지수
+2. 운동 결과에 대한 피드백. : 정확도에 대한 평가(좋음, 나쁨) / BMI 지수에 따른 칼로리 소모량
+3. 앞으로 나아갈 운동방향에 대해 회원의 운동목표에 맞는 운동, 식단 추천
+응답을 500자 내외로 제한합니다.
 '''
             },
             {
@@ -129,11 +137,9 @@ async def generate_report(data: GptMemberDto):
             }
 
         ],
-        temperature=1,
-        max_tokens=2000,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
+        temperature=0.1,
+        max_tokens=700,
+        top_p=0.9
     )
 
     ai_message = response.choices[0].message['content']
