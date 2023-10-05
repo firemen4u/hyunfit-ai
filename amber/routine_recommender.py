@@ -7,8 +7,8 @@ from .routine_data_handler import routineDataHandler
 
 
 class RoutineRecommender():
+    routines = []
     NUM_RECOMMENDATIONS = 5
-    routines = routineDataHandler.routines
     must_be_included = ['exc_goal_diet', 'exc_goal_healthy',  'exc_type_lower_weight', 'exc_type_upper_weight', 'exc_type_all_weight', 'exc_type_cardio', 'experience_level']
 
     def routine_recommendations(self, member: Member):
@@ -17,7 +17,8 @@ class RoutineRecommender():
 
         # 입력 사용자 프로필을 DataFrame으로 변환
         input_df = pd.DataFrame([preferences.model_dump()])
-
+        
+        self.routines = routineDataHandler.get_routines()
         # Label Encoding을 사용하여 범주형 데이터를 수치형으로 변환
         label_encoder = LabelEncoder()
         encoded_df = self.routines.copy()
