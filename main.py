@@ -106,7 +106,7 @@ async def generate_report(data: GptMemberDto):
 운동 능력:{level}
 운동 목표:{goal}
 고려 사항:{consider}
-한달 간 운동하는 부위:{target}
+한달 간 운동한 부위:{target}
 이번 달 운동 시간:{round(timeInSeconds/60)}분.
 소모한 총 칼로리:{calories}Kcal.
 운동 기록의 정확도:{accuracy}.
