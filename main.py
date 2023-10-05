@@ -84,10 +84,9 @@ async def generate_report(data: GptMemberDto):
     calories = data.exerciseHistory['totalCalories']
 
     # 해당월의 날짜 별 기록
-    daily_records = data.exerciseHistory['dailyRecords']
     member_filtered_daily_records = []
     # 필터링
-    for record in daily_records:
+    for record in data.exerciseHistory['dailyRecords']:
         timestamp_in_ms = record['day']
         timestamp_in_s = timestamp_in_ms // 1000  # 밀리세컨드를 초로 변환
         normal_date = datetime.fromtimestamp(timestamp_in_s).strftime('%Y-%m-%d')
@@ -101,43 +100,33 @@ async def generate_report(data: GptMemberDto):
 
     top3_target = [t[0] for t in targets[:2]]
 
-    system_text = f'''당신은 헬스트레이너입니다. 회원이름:{name}, 이번달 personal training을 받은 횟수:{pt_count}회.
-{name}의 성별,키,몸무게: {gender},{height}cm,{weight}kg.
-운동 능력:{level}
-운동 목표:{goal}
-고려 사항:{consider}
-한달 간 운동한 부위:{target}
-이번 달 운동 시간:{round(timeInSeconds/60)}분.
-소모한 총 칼로리:{calories}Kcal.
-운동 기록의 정확도:{accuracy}.
-이번 달 출석일수:{len(member_filtered_daily_records)}일
-이번 달 많이 운동한 부위:{','.join(top3_target)}'''
+    messages = [
+        {
+            "role": "system",
+            "content": "당신은 헬스트레이너입니다."
+        },
+        {
+            "role": "system",
+            "content": f'''{name}회원의 10월 홈트레이닝 기록을 보고 다음 형식에 맞춰 응답. 600자 제한.
+- 권장하는 홈트레이닝 습관
+- 목표에 맞는 홈트레이닝 운동과 식단 추천'''
+        },
+        {
+            "role": "user",
+            "content": f'''인적사항: 운동 능력={level}, 운동 목표={goal}, 고려 사항={consider}. 
+                10월 운동기록: personal training 횟수={pt_count}, 운동한 부위={target}-{",".join(top3_target)}, 운동시간={round(timeInSeconds/60)}분, 소모칼로리={calories}Kcal, 운동정확도={accuracy}, 출석일수={len(member_filtered_daily_records)}'''
+        },
+        {
+            "role": "assistant",
+            "content": ""
+        }
 
-
+    ]
     t1 = time.time()
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": system_text
-            },
-            {
-                "role": "user",
-                "content": '''현재 회원의 운동기록입니다. 아래형태로 간단히 대답해주세요.
-1. 키와 몸무게에 대해 건강관련 평가. : BMI 지수
-2. 운동 결과에 대한 피드백. : 정확도에 대한 평가(좋음, 나쁨) / BMI 지수에 따른 칼로리 소모량
-3. 앞으로 나아갈 운동방향에 대해 회원의 운동목표에 맞는 운동, 식단 추천
-응답을 500자 내외로 제한합니다.
-'''
-            },
-            {
-                "role": "assistant",
-                "content": ""
-            }
-
-        ],
-        temperature=0.1,
+        messages=messages,
+        temperature=0.3,
         max_tokens=700,
         top_p=0.9
     )
