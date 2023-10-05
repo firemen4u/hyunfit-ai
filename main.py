@@ -31,7 +31,7 @@ async def generate_report(data: GptMemberDto):
     goal = {1: "체중 관리", 2: "건강 관리"}[data.mbrExerciseGoal]
     height = data.mbrHeight
     weight = data.mbrWeight
-    level = {1: "초보", 2: "초중급", 3: "중급", 4: "중고급", 5: "고급"}[data.mbrExerciseExperienceLevel]
+    level = {1: "초보", 2: "초중급", 3: "중급", 4: "중상급", 5: "상급"}[data.mbrExerciseExperienceLevel]
     target = {1: "상체", 2: "하체", 3: "전신", 4: "유산소", 5: "상관없음"}[data.mbrExerciseTarget]
 
     # 고려사항
@@ -90,16 +90,20 @@ async def generate_report(data: GptMemberDto):
         timestamp_in_ms = record['day']
         timestamp_in_s = timestamp_in_ms // 1000  # 밀리세컨드를 초로 변환
         normal_date = datetime.fromtimestamp(timestamp_in_s).strftime('%Y-%m-%d')
-
         calories = record['calories']
-
         member_filtered_daily_records.append({'운동한 날짜': normal_date, '날짜에 소모한 칼로리': calories})
 
-    targets = {target_mapping[item['targetArea']]: item['totalCalories'] for item in exercise_targets}
-    targets = sorted(targets.items(), key=lambda x: x[1], reverse=True)
+    totalCalories = sum(r['calories'] for r in data.exerciseHistory['dailyRecords'])
 
-    top3_target = [t[0] for t in targets[:2]]
+    targets = [
+        f'''{target_mapping[item['targetArea']]} {round(item['totalCalories']/totalCalories*100)}%'''
+        for item in exercise_targets
+    ]
 
+    # targets = [
+    #     f'''{target_mapping[item['targetArea']]}'''
+    #     for item in exercise_targets
+    # ]
     messages = [
         {
             "role": "system",
@@ -108,13 +112,13 @@ async def generate_report(data: GptMemberDto):
         {
             "role": "system",
             "content": f'''{name}회원의 10월 홈트레이닝 기록을 보고 다음 형식에 맞춰 응답. 600자 제한.
-- 권장하는 홈트레이닝 습관
-- 목표에 맞는 홈트레이닝 운동과 식단 추천'''
+- {goal}를 위해 권장하는 홈트레이닝 습관
+- 도움이 될 홈트레이닝 동작과 식단 추천'''
         },
         {
             "role": "user",
-            "content": f'''인적사항: 운동 능력={level}, 운동 목표={goal}, 고려 사항={consider}. 
-                10월 운동기록: personal training 횟수={pt_count}, 운동한 부위={target}-{",".join(top3_target)}, 운동시간={round(timeInSeconds/60)}분, 소모칼로리={calories}Kcal, 운동정확도={accuracy}, 출석일수={len(member_filtered_daily_records)}'''
+            "content": f'''인적사항: 운동 경력={level}, 운동 목표={goal}, 고려 사항={consider}. 
+                10월 운동기록: personal training 횟수={pt_count}, 운동한 부위=[{",".join(targets)}], 운동시간={round(timeInSeconds/60)}분, 소모칼로리={calories}Kcal, 출석일수={len(member_filtered_daily_records)}'''
         },
         {
             "role": "assistant",
@@ -122,6 +126,7 @@ async def generate_report(data: GptMemberDto):
         }
 
     ]
+
     t1 = time.time()
     response = openai.ChatCompletion.create(
         model="gpt-4",
